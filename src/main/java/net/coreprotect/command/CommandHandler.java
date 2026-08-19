@@ -57,6 +57,9 @@ public class CommandHandler implements CommandExecutor {
                     else if (user.hasPermission("coreprotect.lookup") && (corecommand.equals("l") || corecommand.equals("lookup") || corecommand.equals("page") || corecommand.equals("near"))) {
                         permission = true;
                     }
+                    else if ((user.hasPermission("coreprotect.lookup.itemrenames") || user.hasPermission("coreprotect.lookup")) && (corecommand.equals("itemrenames") || corecommand.equals("renames") || corecommand.equals("ir"))) {
+                        permission = true;
+                    }
                     else if (user.hasPermission("coreprotect.lookup.near") && corecommand.equals("near")) {
                         permission = true;
                     }
@@ -103,6 +106,9 @@ public class CommandHandler implements CommandExecutor {
                 }
                 else if (corecommand.equals("near")) {
                     LookupCommand.runCommand(user, command, permission, new String[] { "near", "r:5x5" });
+                }
+                else if (corecommand.equals("itemrenames") || corecommand.equals("renames") || corecommand.equals("ir")) {
+                    ItemRenameCommand.runCommand(user, permission, argumentArray);
                 }
                 else if (corecommand.equals("teleport") || corecommand.equals("tp")) {
                     TeleportCommand.runCommand(user, permission, argumentArray);

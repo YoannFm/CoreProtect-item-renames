@@ -47,6 +47,7 @@ public class Database extends Queue {
     public static final int ENTITY_MAP = 11;
     public static final int BLOCKDATA = 12;
     public static final int ITEM = 13;
+    public static final int ITEM_RENAME = 14;
 
     private static final Map<Integer, String> SQL_QUERIES = new HashMap<>();
 
@@ -57,6 +58,7 @@ public class Database extends Queue {
         SQL_QUERIES.put(SKULL, "INSERT INTO %sprefix%skull (time, owner, skin) VALUES (?, ?, ?)");
         SQL_QUERIES.put(CONTAINER, "INSERT INTO %sprefix%container (time, user, wid, x, y, z, type, data, amount, metadata, action, rolled_back) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         SQL_QUERIES.put(ITEM, "INSERT INTO %sprefix%item (time, user, wid, x, y, z, type, data, amount, action, rolled_back) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        SQL_QUERIES.put(ITEM_RENAME, "INSERT INTO %sprefix%item_rename (time, user, wid, x, y, z, type, old_name, new_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         SQL_QUERIES.put(WORLD, "INSERT INTO %sprefix%world (id, world) VALUES (?, ?)");
         SQL_QUERIES.put(CHAT, "INSERT INTO %sprefix%chat (time, user, wid, x, y, z, message) VALUES (?, ?, ?, ?, ?, ?, ?)");
         SQL_QUERIES.put(COMMAND, "INSERT INTO %sprefix%command (time, user, wid, x, y, z, message) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -308,7 +310,7 @@ public class Database extends Queue {
         }
     }
 
-    private static final List<String> DATABASE_TABLES = Arrays.asList("art_map", "block", "chat", "command", "container", "item", "database_lock", "entity", "entity_map", "material_map", "blockdata_map", "session", "sign", "skull", "user", "username_log", "version", "world");
+    private static final List<String> DATABASE_TABLES = Arrays.asList("art_map", "block", "chat", "command", "container", "item", "item_rename", "database_lock", "entity", "entity_map", "material_map", "blockdata_map", "session", "sign", "skull", "user", "username_log", "version", "world");
 
     public static void createDatabaseTables(String prefix, boolean forcePrefix, Connection forceConnection, boolean mySQL, boolean purge) {
         ConfigHandler.databaseTables.clear();
@@ -371,6 +373,10 @@ public class Database extends Queue {
         index = ", INDEX(wid,x,z,time), INDEX(user,time), INDEX(type,time)";
         statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "item(rowid bigint NOT NULL AUTO_INCREMENT,PRIMARY KEY(rowid), time int, user int, wid int, x int, y int, z int, type int, data blob, amount int, action tinyint, rolled_back tinyint" + index + ") ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4");
 
+        // Item rename (tracks items renamed via anvil, and by whom)
+        index = ", INDEX(wid,x,z,time), INDEX(user,time)";
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "item_rename(rowid bigint NOT NULL AUTO_INCREMENT,PRIMARY KEY(rowid), time int, user int, wid int, x int, y int, z int, type int, old_name varchar(256), new_name varchar(256)" + index + ") ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4");
+
         // Database lock
         statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "database_lock(rowid bigint NOT NULL AUTO_INCREMENT,PRIMARY KEY(rowid),status tinyint,time int) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4");
 
@@ -427,6 +433,8 @@ public class Database extends Queue {
             ensureMySQLIndex(statement, prefix + "item", "wid", "x", "z", "time");
             ensureMySQLIndex(statement, prefix + "item", "user", "time");
             ensureMySQLIndex(statement, prefix + "item", "type", "time");
+            ensureMySQLIndex(statement, prefix + "item_rename", "wid", "x", "z", "time");
+            ensureMySQLIndex(statement, prefix + "item_rename", "user", "time");
         }
         catch (Exception e) {
             Chat.console(Phrase.build(Phrase.DATABASE_INDEX_ERROR));
@@ -576,6 +584,9 @@ public class Database extends Queue {
         if (!tableData.contains(prefix + "item")) {
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "item (time INTEGER, user INTEGER, wid INTEGER, x INTEGER, y INTEGER, z INTEGER, type INTEGER, data BLOB, amount INTEGER, action INTEGER, rolled_back INTEGER);");
         }
+        if (!tableData.contains(prefix + "item_rename")) {
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "item_rename (time INTEGER, user INTEGER, wid INTEGER, x INTEGER, y INTEGER, z INTEGER, type INTEGER, old_name TEXT, new_name TEXT);");
+        }
         if (!tableData.contains(prefix + "database_lock")) {
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS " + prefix + "database_lock (status INTEGER, time INTEGER);");
         }
@@ -633,6 +644,8 @@ public class Database extends Queue {
             createSQLiteIndex(statement, indexData, attachDatabase, "item_index", prefix + "item(wid,x,z,time)");
             createSQLiteIndex(statement, indexData, attachDatabase, "item_user_index", prefix + "item(user,time)");
             createSQLiteIndex(statement, indexData, attachDatabase, "item_type_index", prefix + "item(type,time)");
+            createSQLiteIndex(statement, indexData, attachDatabase, "item_rename_index", prefix + "item_rename(wid,x,z,time)");
+            createSQLiteIndex(statement, indexData, attachDatabase, "item_rename_user_index", prefix + "item_rename(user,time)");
             createSQLiteIndex(statement, indexData, attachDatabase, "entity_map_id_index", prefix + "entity_map(id)");
             createSQLiteIndex(statement, indexData, attachDatabase, "material_map_id_index", prefix + "material_map(id)");
             createSQLiteIndex(statement, indexData, attachDatabase, "session_index", prefix + "session(wid,x,z,time)");

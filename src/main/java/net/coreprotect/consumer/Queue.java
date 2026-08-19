@@ -382,6 +382,17 @@ public class Queue {
         queueStandardData(consumerId, currentConsumer, new String[] { user, null }, location);
     }
 
+    /**
+     * Queues an item rename event (e.g. from an anvil) for logging, recording
+     * who renamed the item, the item type, and the old/new display names.
+     */
+    protected static void queueItemRename(String user, Location location, Material type, String oldName, String newName) {
+        int currentConsumer = Consumer.currentConsumer;
+        int consumerId = Consumer.newConsumerId(currentConsumer);
+        addConsumer(currentConsumer, new Object[] { consumerId, Process.ITEM_RENAME, null, 0, null, 0, 0, null });
+        queueStandardData(consumerId, currentConsumer, new String[] { user, null }, new Object[] { getBlockLocation(location), type, oldName, newName });
+    }
+
     protected static void queueSignText(String user, Location location, int action, int color, int colorSecondary, boolean frontGlowing, boolean backGlowing, boolean isWaxed, boolean isFront, String line1, String line2, String line3, String line4, String line5, String line6, String line7, String line8, int offset) {
         /*
         if (line1.length() == 0 && line2.length() == 0 && line3.length() == 0 && line4.length() == 0) {

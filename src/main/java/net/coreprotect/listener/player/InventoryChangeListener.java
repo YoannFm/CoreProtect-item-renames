@@ -39,6 +39,7 @@ import net.coreprotect.consumer.Queue;
 import net.coreprotect.model.BlockGroup;
 import net.coreprotect.paper.PaperAdapter;
 import net.coreprotect.thread.Scheduler;
+import net.coreprotect.utility.ItemRenameUtil;
 import net.coreprotect.utility.ItemUtils;
 import net.coreprotect.utility.Validate;
 import us.lynuxcraft.deadsilenceiv.advancedchests.AdvancedChestsAPI;
@@ -326,11 +327,12 @@ public final class InventoryChangeListener extends Queue implements Listener {
             return false;
         }
 
-        // Get the input items (slots 0 and 1 in the anvil)
+        // Get the input items (slots 0 and 1 in the anvil).
+        // Slot 1 (repair material/book) is optional -- a plain rename only uses slot 0.
         ItemStack firstItem = event.getInventory().getItem(0);
         ItemStack secondItem = event.getInventory().getItem(1);
 
-        if (firstItem == null || secondItem == null) {
+        if (firstItem == null) {
             return false;
         }
 
@@ -342,7 +344,9 @@ public final class InventoryChangeListener extends Queue implements Listener {
         // Log the input items as removed
         List<ItemStack> removedItems = new ArrayList<>();
         removedItems.add(firstItem.clone());
-        removedItems.add(secondItem.clone());
+        if (secondItem != null) {
+            removedItems.add(secondItem.clone());
+        }
         ConfigHandler.itemsDestroy.put(loggingItemId, removedItems);
 
         // Log the output item as created
@@ -353,7 +357,27 @@ public final class InventoryChangeListener extends Queue implements Listener {
         int time = (int) (System.currentTimeMillis() / 1000L) + 1;
         Queue.queueItemTransaction(player.getName(), location.clone(), time, 0, itemId);
 
+        // Track item renames separately, recording who renamed the item and its old/new name
+        checkItemRename(player, location, firstItem, resultItem);
+
         return true;
+    }
+
+    /**
+     * Detects whether an anvil operation actually renamed an item (as opposed to just
+     * repairing/combining/enchanting it), and if so, queues the rename for logging.
+     *
+     * @param player
+     *            The player performing the anvil operation
+     * @param location
+     *            The location of the player (used for the log entry)
+     * @param inputItem
+     *            The original item (anvil slot 0) before the operation
+     * @param resultItem
+     *            The resulting item (anvil result slot) after the operation
+     */
+    private void checkItemRename(Player player, Location location, ItemStack inputItem, ItemStack resultItem) {
+        ItemRenameUtil.checkRename(player.getName(), location, inputItem, resultItem);
     }
 
     private boolean checkCrafterSlotChange(InventoryClickEvent event) {
